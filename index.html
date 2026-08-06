@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3부 8팀 AE 통합 업무 대시보드 | eMnet</title>
+    <meta name="description" content="eMnet 3부 8팀 (3본부 2실 4팀) AE 전용 통합 업무 대시보드 - 계정 관리, 주간 매출 취합, 연차 캘린더, 생일 알림, 간식 장보기">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Sales Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-box">
+                    <i class="fa-solid fa-chart-line logo-icon"></i>
+                    <div class="logo-text">
+                        <span class="brand-title">eMnet AE Hub</span>
+                        <span class="team-badge">3부 8팀 (3본부 2실 4팀)</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">MAIN DASHBOARD</div>
+                <button class="nav-item active" data-tab="accounts">
+                    <i class="fa-solid fa-key nav-icon"></i>
+                    <span>1. 팀 계정 정보</span>
+                    <span class="nav-badge" id="account-count-badge">0</span>
+                </button>
+                <button class="nav-item" data-tab="sales">
+                    <i class="fa-solid fa-coins nav-icon"></i>
+                    <span>2. 광고주 주간매출</span>
+                    <span class="nav-tag">HOT</span>
+                </button>
+                <button class="nav-item" data-tab="leave">
+                    <i class="fa-solid fa-calendar-check nav-icon"></i>
+                    <span>3. 팀 연차 캘린더</span>
+                </button>
+                <button class="nav-item" data-tab="birthdays">
+                    <i class="fa-solid fa-cake-candles nav-icon"></i>
+                    <span>4. 팀원 생일정보</span>
+                    <span class="nav-badge alert" id="birthday-dday-badge">D-Day</span>
+                </button>
+                <button class="nav-item" data-tab="snacks">
+                    <i class="fa-solid fa-basket-shopping nav-icon"></i>
+                    <span>5. 팀 간식 장보기</span>
+                    <span class="nav-badge info" id="snack-pending-badge">0</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile-card">
+                    <div class="avatar-box">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-name">마케터 AE 팀장</span>
+                        <span class="profile-role">Team Leader</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-wrapper">
+            <!-- Header Toolbar -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="btn-icon mobile-menu-btn" id="toggle-sidebar" aria-label="Toggle Navigation">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="global-search" placeholder="팀원 이름, 계정, 매체명, 광고주 검색 (Ctrl+K)...">
+                        <kbd class="search-kbd">Ctrl K</kbd>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <!-- Upcoming Alert Widget -->
+                    <div class="quick-alert-pill" id="quick-alert-pill">
+                        <i class="fa-solid fa-bullhorn text-warning"></i>
+                        <span id="quick-alert-text">이번 주 생일자 2명 / 연차 1명 예정</span>
+                    </div>
+
+                    <!-- Theme Toggle Button -->
+                    <button class="theme-toggle-btn" id="theme-toggle" title="다크/라이트 모드 전환">
+                        <i class="fa-solid fa-moon dark-icon"></i>
+                        <i class="fa-solid fa-sun light-icon"></i>
+                    </button>
+
+                    <!-- Export/Import Data Button -->
+                    <div class="dropdown">
+                        <button class="btn btn-secondary btn-sm" id="data-manage-btn">
+                            <i class="fa-solid fa-database"></i> 데이터 관리
+                        </button>
+                        <div class="dropdown-menu" id="data-dropdown">
+                            <button class="dropdown-item" id="export-json-btn">
+                                <i class="fa-solid fa-file-export"></i> 백업 데이터 다운로드 (JSON)
+                            </button>
+                            <button class="dropdown-item" id="import-json-btn">
+                                <i class="fa-solid fa-file-import"></i> 백업 데이터 복원
+                            </button>
+                            <button class="dropdown-item text-danger" id="reset-default-btn">
+                                <i class="fa-solid fa-rotate-left"></i> 시트 초기 데이터로 리셋
+                            </button>
+                        </div>
+                    </div>
+                    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                </div>
+            </header>
+
+            <!-- Dynamic Tab Contents -->
+            <div class="content-body">
+
+                <!-- 1. 팀 계정 정보 TAB -->
+                <section class="tab-pane active" id="tab-accounts">
+                    <div class="pane-header">
+                        <div>
+                            <h1 class="pane-title"><i class="fa-solid fa-key text-gradient"></i> 팀 계정 정보 관리 Hub</h1>
+                            <p class="pane-subtitle">팀 공용 계정, 매체사(네이버, 카카오, Meta, AppsFlyer 등) 로그인 정보 및 팀원 개인 ID 현황</p>
+                        </div>
+                        <div class="pane-actions">
+                            <button class="btn btn-primary" id="add-account-btn">
+                                <i class="fa-solid fa-plus"></i> 신규 계정 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Account Category Filters & Subtabs -->
+                    <div class="filter-bar">
+                        <div class="category-tabs" id="account-category-tabs">
+                            <button class="cat-btn active" data-category="all">전체 (<span id="cat-count-all">0</span>)</button>
+                            <button class="cat-btn" data-category="team">팀 공용/서드파티 (<span id="cat-count-team">0</span>)</button>
+                            <button class="cat-btn" data-category="intranet">사원 인트라넷/G-Suite (<span id="cat-count-intranet">0</span>)</button>
+                            <button class="cat-btn" data-category="media">매체사(네이버/카카오/META) (<span id="cat-count-media">0</span>)</button>
+                            <button class="cat-btn" data-category="brand">브랜드/특수 계정 (<span id="cat-count-brand">0</span>)</button>
+                        </div>
+                        <div class="filter-inputs">
+                            <select id="account-owner-filter" class="select-input">
+                                <option value="">전체 담당자 보기</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Notice Card -->
+                    <div class="info-banner">
+                        <i class="fa-solid fa-shield-halved banner-icon"></i>
+                        <div class="banner-text">
+                            <strong>보안 가이드:</strong> 비밀번호 마스킹 기본 적용 중. 복사 버튼(<i class="fa-regular fa-copy"></i>)을 누르면 클립보드에 자동 복사됩니다. (팀 이동/퇴사자 정보 보존 중)
+                        </div>
+                    </div>
+
+                    <!-- Accounts Grid Table -->
+                    <div class="card grid-card">
+                        <div class="table-responsive">
+                            <table class="data-table" id="accounts-table">
+                                <thead>
+                                    <tr>
+                                        <th>카테고리/플랫폼</th>
+                                        <th>담당자 / 사용자명</th>
+                                        <th>ID / 이메일</th>
+                                        <th>비밀번호</th>
+                                        <th>접속 URL / 메모</th>
+                                        <th class="text-center">액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accounts-tbody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. 광고주 주간매출 취합 TAB -->
+                <section class="tab-pane" id="tab-sales">
+                    <div class="pane-header">
+                        <div>
+                            <h1 class="pane-title"><i class="fa-solid fa-table-cells text-gradient"></i> 광고주 주간매출 취합 Hub (팀 통합 예산 양식)</h1>
+                            <p class="pane-subtitle">팀원들이 담당 파트별 예산을 셀에 직접 기재하면 이니스프리(1~7 합산) 및 팀 전체 예상 매출(A+B+C)이 실시간 자동 계산됩니다.</p>
+                        </div>
+                        <div class="pane-actions">
+                            <button class="btn btn-outline" id="export-sales-csv">
+                                <i class="fa-solid fa-file-csv"></i> 취합표 엑셀/CSV
+                            </button>
+                            <button class="btn btn-secondary" id="reset-matrix-data">
+                                <i class="fa-solid fa-rotate-left"></i> 데이터 초기화
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card glass">
+                            <div class="kpi-icon bg-purple-glow"><i class="fa-solid fa-calculator"></i></div>
+                            <div class="kpi-details">
+                                <span class="kpi-title" id="kpi-week-label">8월 2주차 팀 전체 예상 매출 (A+B+C)</span>
+                                <h3 class="kpi-value" id="kpi-total-revenue" style="color: var(--brand-primary);">₩0</h3>
+                                <span class="kpi-sub positive"><i class="fa-solid fa-circle-check"></i> 팀 전체 매출 합산 실시간 반응중</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-icon bg-emerald-glow"><i class="fa-solid fa-leaf"></i></div>
+                            <div class="kpi-details">
+                                <span class="kpi-title">이니스프리 합계 (A = 1~7번 합산)</span>
+                                <h3 class="kpi-value" id="kpi-innisfree-total">₩0</h3>
+                                <span class="kpi-sub positive">직영DA~쿠팡 7개 파트 자동 집계</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-icon bg-pink-glow" style="background: linear-gradient(135deg, #ec4899, #be185d);"><i class="fa-solid fa-heart"></i></div>
+                            <div class="kpi-details">
+                                <span class="kpi-title">에뛰드 (B)</span>
+                                <h3 class="kpi-value" id="kpi-etude-total">₩0</h3>
+                                <span class="kpi-sub neutral">에뛰드 매출 입력값</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-icon bg-amber-glow"><i class="fa-solid fa-gem"></i></div>
+                            <div class="kpi-details">
+                                <span class="kpi-title">에스쁘아 (C)</span>
+                                <h3 class="kpi-value" id="kpi-espoir-total">₩0</h3>
+                                <span class="kpi-sub neutral">에스쁘아 매출 입력값</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notice Banner -->
+                    <div class="info-banner" style="background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3);">
+                        <i class="fa-solid fa-lightbulb banner-icon" style="color: #f59e0b;"></i>
+                        <div class="banner-text">
+                            <strong>입력 안내:</strong> 파트별(1~7) 및 에뛰드(B), 에스쁘아(C) 셀에 숫자를 기재하시면 <strong>이니스프리(A = 1~7 합산)</strong>와 <strong>팀 전체 매출 합계(A+B+C)</strong>가 즉시 자동 계산됩니다. (단위: 원, 숫자를 클릭하여 편집)
+                        </div>
+                    </div>
+
+                    <!-- Excel Matrix Spreadsheet Table -->
+                    <div class="card excel-sheet-card">
+                        <div class="card-header flex-between">
+                            <h3 class="card-title"><i class="fa-solid fa-file-excel text-success"></i> 주차별 광고주 파트별 예산 취합표</h3>
+                            <span class="badge badge-intranet"><i class="fa-solid fa-arrows-rotate"></i> 실시간 자동 수식 계산중</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="excel-matrix-table" id="excel-matrix-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-header-cat">구분</th>
+                                        <th class="col-header">8월1주차</th>
+                                        <th class="col-header highlight-col">8월2주차</th>
+                                        <th class="col-header">8월3주차</th>
+                                        <th class="col-header">8월4주차</th>
+                                        <th class="col-header">8월마감</th>
+                                        <th class="col-header">9월예상마감</th>
+                                        <th class="col-header">9월1주차</th>
+                                        <th class="col-header">9월2주차</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="excel-matrix-tbody">
+                                    <!-- Dynamic Excel Grid Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. 팀 연차 캘린더 TAB -->
+                <section class="tab-pane" id="tab-leave">
+                    <div class="pane-header">
+                        <div>
+                            <h1 class="pane-title"><i class="fa-solid fa-calendar-check text-gradient"></i> 팀 연차 캘린더</h1>
+                            <p class="pane-subtitle">팀원 연차/반차/병가 일정 공유 및 팀 공백 최소화 관리</p>
+                        </div>
+                        <div class="pane-actions">
+                            <button class="btn btn-primary" id="add-leave-btn">
+                                <i class="fa-solid fa-calendar-plus"></i> 연차 일정 등록
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Leave Capacity Alert -->
+                    <div class="conflict-alert hidden" id="leave-conflict-alert">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span><strong>부재 주의:</strong> <span id="conflict-date-text"></span>에 2명 이상의 AE가 동시에 연차 예정입니다. 업무 대행 지정 필요!</span>
+                    </div>
+
+                    <div class="calendar-layout">
+                        <!-- Calendar Widget -->
+                        <div class="card calendar-card">
+                            <div class="calendar-header">
+                                <button class="btn-icon" id="cal-prev-month"><i class="fa-solid fa-chevron-left"></i></button>
+                                <h2 class="calendar-month-title" id="cal-current-month">2026년 8월</h2>
+                                <button class="btn-icon" id="cal-next-month"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+
+                            <div class="calendar-weekdays">
+                                <div class="sun">일</div>
+                                <div>월</div>
+                                <div>화</div>
+                                <div>수</div>
+                                <div>목</div>
+                                <div>금</div>
+                                <div class="sat">토</div>
+                            </div>
+                            <div class="calendar-days-grid" id="calendar-days-grid">
+                                <!-- Dynamic Calendar Days -->
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Upcoming Leave List -->
+                        <div class="card leave-sidebar-card">
+                            <h3 class="card-title"><i class="fa-solid fa-clock-history"></i> 다가오는 팀원 연차</h3>
+                            <div class="leave-list-container" id="upcoming-leave-list">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. 팀원 생일정보 TAB -->
+                <section class="tab-pane" id="tab-birthdays">
+                    <div class="pane-header">
+                        <div>
+                            <h1 class="pane-title"><i class="fa-solid fa-cake-candles text-gradient"></i> 팀원 생일정보 & 축하 Hub</h1>
+                            <p class="pane-subtitle">팀원의 생일 일정 카운트다운과 따뜻한 축하 메시지 공유 공간</p>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Birthday Spotlight Card -->
+                    <div class="birthday-hero-card" id="birthday-spotlight-card">
+                        <div class="birthday-hero-left">
+                            <span class="hero-badge"><i class="fa-solid fa-gift"></i> UPCOMING BIRTHDAY</span>
+                            <h2 class="hero-name" id="spotlight-name">조다솜 AE</h2>
+                            <p class="hero-date" id="spotlight-date">8월 21일 (D-16)</p>
+                            <p class="hero-desc">팀의 따뜻한 생일 축하 메시지를 남겨주세요! 🎉</p>
+                        </div>
+                        <div class="birthday-hero-right">
+                            <div class="cake-illustration">
+                                <i class="fa-solid fa-cake-candles"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Birthday Grid & Message Wall -->
+                    <div class="birthday-grid-layout">
+                        <!-- Birthday Roster -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fa-solid fa-users"></i> 팀원 생일 목록</h3>
+                            </div>
+                            <div class="birthday-list" id="birthday-roster">
+                                <!-- Dynamic Roster -->
+                            </div>
+                        </div>
+
+                        <!-- Congratulatory Board -->
+                        <div class="card">
+                            <div class="card-header flex-between">
+                                <h3 class="card-title"><i class="fa-solid fa-comments"></i> 롤링 축하 메시지 게시판</h3>
+                                <button class="btn btn-sm btn-primary" id="add-wishes-btn">
+                                    <i class="fa-solid fa-pen"></i> 축하 한마디 작성
+                                </button>
+                            </div>
+                            <div class="wishes-board" id="wishes-board-container">
+                                <!-- Dynamic Wishes -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. 팀 간식 장보기 TAB -->
+                <section class="tab-pane" id="tab-snacks">
+                    <div class="pane-header">
+                        <div>
+                            <h1 class="pane-title"><i class="fa-solid fa-basket-shopping text-gradient"></i> 팀 간식 장보기 취합 Hub</h1>
+                            <p class="pane-subtitle">팀원들이 먹고 싶은 간식을 자유롭게 신청하고 투표하여 구매하는 장보기 리스트</p>
+                        </div>
+                        <div class="pane-actions">
+                            <button class="btn btn-outline" id="print-snack-list-btn">
+                                <i class="fa-solid fa-print"></i> 장보기 리스트 출력
+                            </button>
+                            <button class="btn btn-primary" id="add-snack-btn">
+                                <i class="fa-solid fa-plus"></i> 간식 신청하기
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Budget Tracker Bar -->
+                    <div class="budget-card glass">
+                        <div class="budget-header flex-between">
+                            <div>
+                                <span class="budget-title"><i class="fa-solid fa-wallet"></i> 이번 달 팀 간식 예산 현황</span>
+                                <div class="budget-numbers">
+                                    <span class="budget-spent" id="snack-spent-amount">₩145,000</span>
+                                    <span class="budget-total">/ ₩200,000 (월 예산)</span>
+                                </div>
+                            </div>
+                            <div class="budget-remaining-badge" id="budget-remaining-badge">
+                                잔여 예산 ₩55,000
+                            </div>
+                        </div>
+                        <div class="progress-bar-lg">
+                            <div class="progress-fill-gradient" id="budget-progress-fill" style="width: 72.5%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Snack Wishlist Grid -->
+                    <div class="card">
+                        <div class="card-header flex-between">
+                            <h3 class="card-title"><i class="fa-solid fa-heart"></i> 팀원 간식 희망 리스트 (투표순)</h3>
+                            <div class="snack-status-filters" id="snack-status-filters">
+                                <button class="filter-chip active" data-status="all">전체 보기</button>
+                                <button class="filter-chip" data-status="신청">신청중</button>
+                                <button class="filter-chip" data-status="담기">장바구니</button>
+                                <button class="filter-chip" data-status="구매완료">구매완료</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" id="snacks-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">투표</th>
+                                        <th>간식 품목명</th>
+                                        <th>카테고리</th>
+                                        <th>예상 가격</th>
+                                        <th>신청 AE</th>
+                                        <th>상태</th>
+                                        <th>구매 링크</th>
+                                        <th class="text-center">액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="snacks-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DIALOGS -->
+
+    <!-- Account Modal -->
+    <div class="modal-backdrop hidden" id="modal-account">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-account-title">신규 계정 정보 추가</h3>
+                <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-account">
+                <input type="hidden" id="acc-id">
+                <div class="form-group">
+                    <label for="acc-category">카테고리</label>
+                    <select id="acc-category" class="select-input" required>
+                        <option value="team">팀 공용 / 서드파티 (AppsFlyer, Airbridge 등)</option>
+                        <option value="intranet">사원 인트라넷 / G-Suite</option>
+                        <option value="media">매체사 (네이버/카카오/META/Criteo 등)</option>
+                        <option value="brand">브랜드 / 협력사 (올영협력, 이니스프리 등)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="acc-system">시스템 / 플랫폼명</label>
+                        <input type="text" id="acc-system" class="text-input" placeholder="예: 네이버 POS, META" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="acc-owner">담당 AE / 사원명</label>
+                        <input type="text" id="acc-owner" class="text-input" placeholder="예: 박아름, 조다솜 또는 팀공용">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="acc-login-id">아이디 / G-Suite 이메일</label>
+                        <input type="text" id="acc-login-id" class="text-input" placeholder="로그인 ID 입력" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="acc-login-pw">비밀번호</label>
+                        <input type="text" id="acc-login-pw" class="text-input" placeholder="비밀번호 입력">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="acc-url">접속 URL / 메모</label>
+                    <input type="text" id="acc-url" class="text-input" placeholder="https://... 또는 특이사항">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close-modal>취소</button>
+                    <button type="submit" class="btn btn-primary">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sales Modal -->
+    <div class="modal-backdrop hidden" id="modal-sales">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">주간 광고 예산 & 매출 추가/수정</h3>
+                <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-sales">
+                <input type="hidden" id="sales-entry-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sales-brand">광고주 브랜드</label>
+                        <select id="sales-brand" class="select-input" required>
+                            <option value="이니스프리">이니스프리 (Innisfree)</option>
+                            <option value="에뛰드">에뛰드 (Etude)</option>
+                            <option value="에스쁘아">에스쁘아 (Espoir)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sales-part">파트 / 구문</label>
+                        <select id="sales-part" class="select-input" required>
+                            <option value="상시">상시 구분 (SA/DA/브검 등)</option>
+                            <option value="입점몰">입점몰 구분 (올리브영/무신사/지그재그/11번가 등)</option>
+                            <option value="프로모션">프로모션 / 기획전</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="sales-channel">주요 매체 / 입점몰 채널명</label>
+                    <input type="text" id="sales-channel" class="text-input" placeholder="예: 올리브영, 네이버 SA, Meta, 지그재그" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sales-spend">주간 집행 예산 (원)</label>
+                        <input type="number" id="sales-spend" class="text-input" placeholder="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sales-revenue">주간 예상 매출액 (원)</label>
+                        <input type="number" id="sales-revenue" class="text-input" placeholder="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="sales-note">비고 / 특이사항</label>
+                    <input type="text" id="sales-note" class="text-input" placeholder="예: 올영 세일 프로모션 집행 건">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close-modal>취소</button>
+                    <button type="submit" class="btn btn-primary">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leave Modal -->
+    <div class="modal-backdrop hidden" id="modal-leave">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">팀원 연차 일정 등록</h3>
+                <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-leave">
+                <div class="form-group">
+                    <label for="leave-member">팀원 선택</label>
+                    <select id="leave-member" class="select-input" required>
+                        <!-- Dynamic Options -->
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="leave-type">구분</label>
+                        <select id="leave-type" class="select-input" required>
+                            <option value="연차">연차 (종일)</option>
+                            <option value="오전반차">오전 반차</option>
+                            <option value="오후반차">오후 반차</option>
+                            <option value="공가">공가</option>
+                            <option value="병가">병가</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="leave-date">날짜</label>
+                        <input type="date" id="leave-date" class="text-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="leave-memo">업무 대행자 / 사유</label>
+                    <input type="text" id="leave-memo" class="text-input" placeholder="대행 AE 및 비상 연락망">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close-modal>취소</button>
+                    <button type="submit" class="btn btn-primary">등록하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Wish Modal -->
+    <div class="modal-backdrop hidden" id="modal-wishes">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">생일 축하 한마디 남기기</h3>
+                <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-wishes">
+                <div class="form-group">
+                    <label for="wish-sender">작성자 (팀원명)</label>
+                    <input type="text" id="wish-sender" class="text-input" placeholder="작성자 이름" required>
+                </div>
+                <div class="form-group">
+                    <label for="wish-receiver">축하받을 팀원</label>
+                    <select id="wish-receiver" class="select-input" required>
+                        <!-- Dynamic -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="wish-message">축하 메시지</label>
+                    <textarea id="wish-message" class="text-input" rows="3" placeholder="생일 축하 메시지를 따뜻하게 남겨주세요!" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close-modal>취소</button>
+                    <button type="submit" class="btn btn-primary">등록</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Snack Modal -->
+    <div class="modal-backdrop hidden" id="modal-snack">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">팀 간식 신청하기</h3>
+                <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-snack">
+                <div class="form-group">
+                    <label for="snack-title">간식 품목명</label>
+                    <input type="text" id="snack-title" class="text-input" placeholder="예: 카누 아이스 아메리카노, 몽쉘" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="snack-category">카테고리</label>
+                        <select id="snack-category" class="select-input" required>
+                            <option value="음료/커피">음료 / 커피</option>
+                            <option value="과자/스낵">과자 / 스낵</option>
+                            <option value="초콜릿/사탕">초콜릿 / 사탕</option>
+                            <option value="빵/간식거리">빵 / 간식거리</option>
+                            <option value="과일/건강식">과일 / 건강식</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="snack-price">예상 가격 (원)</label>
+                        <input type="number" id="snack-price" class="text-input" placeholder="15000" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="snack-requester">신청자 (AE)</label>
+                        <input type="text" id="snack-requester" class="text-input" placeholder="예: 조다솜" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="snack-link">구매 링크 (선택)</label>
+                        <input type="text" id="snack-link" class="text-input" placeholder="https://coupang.com/...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close-modal>취소</button>
+                    <button type="submit" class="btn btn-primary">신청하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/account-manager.js"></script>
+    <script src="js/sales-tracker.js"></script>
+    <script src="js/leave-calendar.js"></script>
+    <script src="js/birthday-tracker.js"></script>
+    <script src="js/snack-manager.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
