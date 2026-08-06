@@ -3,19 +3,19 @@
    ========================================================================== */
 
 const AccountManager = (function () {
-    // Default initial seed data extracted from eMnet 3부 8팀 Sheet
+    // Default initial seed data (Active team members & shared accounts)
     const defaultAccounts = [
-        // 사원 인트라넷 & G-Suite
-        { id: "acc-1", category: "intranet", system: "G-suite / 인트라넷", owner: "박아름", loginId: "arpark@emnet.kr", loginPw: "a12345!@##", url: "https://intranet.emnet.co.kr", memo: "Naver POS: hellopar0621" },
+        // 사원 인트라넷 & G-Suite (재직 팀원)
         { id: "acc-2", category: "intranet", system: "G-suite / 인트라넷", owner: "조다솜", loginId: "somsom49@emnet.kr", loginPw: "rhkdrh*416**", url: "somsom49.emnet@gmail.com", memo: "Naver POS: somsom49 / Kakao: somsom49@emnet.kr" },
-        { id: "acc-3", category: "intranet", system: "G-suite / 인트라넷", owner: "최민지", loginId: "mins@emnet.kr", loginPw: "zzxc0096", url: "", memo: "Naver POS: mins1000" },
-        { id: "acc-4", category: "intranet", system: "G-suite / 인트라넷", owner: "김예지", loginId: "yjkim4469@emnet.kr", loginPw: "akdldnpdl1@", url: "", memo: "Naver POS: kyjzzangzz1" },
-        { id: "acc-5", category: "intranet", system: "G-suite / 인트라넷", owner: "안지윤", loginId: "zhirun@emnet.kr", loginPw: "zhirun2024!", url: "zhirun.emnet@gmail.com", memo: "META 계정 보유" },
-        { id: "acc-6", category: "intranet", system: "G-suite / 인트라넷", owner: "정완우", loginId: "hejehej@emnet.co.kr", loginPw: "sa3315!!", url: "hejehej.emnet@gmail.com", memo: "Naver POS: hej" },
-        { id: "acc-7", category: "intranet", system: "G-suite / 인트라넷", owner: "강기민", loginId: "giminkang@emnet.kr", loginPw: "kimin8171!", url: "giminkang@emnet@gmail.com", memo: "Naver POS: windrus" },
-        { id: "acc-8", category: "intranet", system: "G-suite / 인트라넷", owner: "이수민", loginId: "sum@emnet.co.kr", loginPw: "aa~@!#~@123", url: "sum.emnet@gmail.com", memo: "Naver POS: numbermean" },
-        { id: "acc-9", category: "intranet", system: "G-suite / 인트라넷", owner: "김서영", loginId: "sykim@emnet.kr", loginPw: "tjdud1029!", url: "sykim.emnet@gmail.com", memo: "Naver POS: sykim1029" },
-        { id: "acc-10", category: "intranet", system: "G-suite / 인트라넷", owner: "최지혜", loginId: "jihye_in@emnet.kr", loginPw: "1998jh1482!", url: "jihyein.emnet@gmail.com", memo: "Naver POS: emnetjihye" },
+        { id: "acc-34", category: "intranet", system: "G-suite / 인트라넷", owner: "이하림", loginId: "harim.lee@emnet.kr", loginPw: "harimy3059", url: "harim.lee.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-35", category: "intranet", system: "G-suite / 인트라넷", owner: "이원선", loginId: "onesun@emnet.co.kr", loginPw: "Dnjstjsdl0730!!", url: "onesun.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-36", category: "intranet", system: "G-suite / 인트라넷", owner: "이혜민", loginId: "leehm@emnet.co.kr", loginPw: "Hyemin714^^", url: "leegm.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-37", category: "intranet", system: "G-suite / 인트라넷", owner: "김채은", loginId: "chaen96@emnet.kr", loginPw: "winwin42#", url: "chaen96.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-38", category: "intranet", system: "G-suite / 인트라넷", owner: "박소윤", loginId: "psoyoun@emnet.co.kr", loginPw: "054356zz~", url: "psoyoun2005.emnet@gmail.com", memo: "Naver POS: xiamin0813" },
+        { id: "acc-39", category: "intranet", system: "G-suite / 인트라넷", owner: "박수영", loginId: "swim23@emnet.co.kr", loginPw: "qkrtndud92!", url: "swim2323.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-40", category: "intranet", system: "G-suite / 인트라넷", owner: "최예원", loginId: "ye1choi@emnet.co.kr", loginPw: "whdwjdtl37@", url: "ye1choi.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-43", category: "intranet", system: "G-suite / 인트라넷", owner: "박진혁", loginId: "hyuk595@emnet.co.kr", loginPw: "q1a2z33a@1", url: "hyuk95.emnet@gmail.com", memo: "팀원 G-Suite" },
+        { id: "acc-44", category: "intranet", system: "G-suite / 인트라넷", owner: "문지영", loginId: "mjy@emnet.co.kr", loginPw: "@jiyoung123", url: "mjy.emnet.kr@gmail.com", memo: "Naver POS: mjyo116" },
 
         // 팀 공용 & 서드파티 솔루션
         { id: "acc-11", category: "team", system: "앱스플라이어 (AppsFlyer)", owner: "팀 공용", loginId: "yolo23@emnet.co.kr", loginPw: "eMnet@11", url: "https://hq.appsflyer.com", memo: "팀 마케팅 측정" },
@@ -31,7 +31,7 @@ const AccountManager = (function () {
         { id: "acc-19", category: "media", system: "K-Ads (케이애즈)", owner: "팀 공용", loginId: "dldpaspt", loginPw: "emnet56053!@", url: "https://k-ads.kt.co.kr/kads/login", memo: "KT 통신사 광고" },
         { id: "acc-20", category: "media", system: "네이버 NOSP", owner: "팀 공용", loginId: "A01200", loginPw: "emnet0420^^!", url: "https://nosp.da.naver.com/", memo: "네이버 보장형 디스플레이" },
         { id: "acc-21", category: "media", system: "스니핏 (Snipit)", owner: "팀 공용", loginId: "emnet0420!!", loginPw: "emnet0420!!!", url: "https://reference.snipit.im/", memo: "레퍼런스 수집" },
-        { id: "acc-22", category: "media", system: "쿠팡 애즈 (Coupang)", owner: "김예지 AE", loginId: "yeji@emnet.co.kr", loginPw: "God06209!", url: "https://advertising.coupang.com", memo: "쿠팡 셀러 광고" },
+        { id: "acc-22", category: "media", system: "쿠팡 애즈 (Coupang)", owner: "팀 공용", loginId: "yeji@emnet.co.kr", loginPw: "God06209!", url: "https://advertising.coupang.com", memo: "쿠팡 셀러 광고" },
 
         // 브랜드 및 협력사
         { id: "acc-23", category: "brand", system: "이니_토스애즈", owner: "이니스프리TF", loginId: "innisfreetf@emnet.co.kr", loginPw: "qjwmqlf12!@", url: "https://toss.im", memo: "토스페이/토스애즈" },

@@ -1514,9 +1514,94 @@ form {
     color: #0f172a !important;
 }
 
-.cell-total {
-    font-size: 1rem !important;
-    text-align: right;
+/* Net Revenue (13.5%) & WoW Rows */
+.excel-row-net {
+    background-color: rgba(52, 211, 153, 0.08) !important;
 }
+
+.cell-net {
+    color: #34d399;
+    font-size: 0.84rem;
+}
+
+.excel-row-net-total {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    border-bottom: 2px solid #059669 !important;
+}
+
+.cell-net-total {
+    color: #10b981 !important;
+    font-size: 0.92rem !important;
+}
+
+.excel-row-wow {
+    background-color: rgba(99, 102, 241, 0.06) !important;
+}
+
+/* Brand Comments Grid */
+.brand-comments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.comment-card {
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.comment-time {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.comment-textarea {
+    resize: vertical;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+/* Education & Meeting Event Badges */
+.tag-education { background-color: rgba(168, 85, 247, 0.2); color: #c084fc; }
+.tag-meeting { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+.badge-education { background-color: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+.training-board {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.training-card {
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid #a855f7;
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.training-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 
 

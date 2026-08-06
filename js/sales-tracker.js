@@ -1,8 +1,10 @@
 /* ==========================================================================
-   Module 2: 광고주 주간매출 취합 Hub (Excel Matrix Spreadsheet Engine)
+   Module 2: 광고주 주간매출 취합 Hub (Excel Matrix & Accounting Engine)
    ========================================================================== */
 
 const SalesTracker = (function () {
+    const NET_RATE = 0.135; // 13.5% 순매출 회계 수수료율
+
     const columns = [
         { id: "w1", label: "8월1주차" },
         { id: "w2", label: "8월2주차", current: true },
@@ -26,7 +28,7 @@ const SalesTracker = (function () {
         { id: "rC", code: "C", name: "에스쁘아", type: "brand_espoir" }
     ];
 
-    // Default Seed Data Matrix
+    // Default Matrix Values
     const defaultMatrix = {
         r1: { w1: 15000000, w2: 16000000, w3: 15500000, w4: 17000000, aug_close: 63500000, sep_exp: 65000000, sep_w1: 16000000, sep_w2: 16500000 },
         r2: { w1: 32000000, w2: 35000000, w3: 34000000, w4: 36000000, aug_close: 137000000, sep_exp: 140000000, sep_w1: 35000000, sep_w2: 36000000 },
@@ -40,10 +42,17 @@ const SalesTracker = (function () {
         rC: { w1: 52000000, w2: 55000000, w3: 56000000, w4: 58000000, aug_close: 221000000, sep_exp: 230000000, sep_w1: 57000000, sep_w2: 58000000 }
     };
 
+    const defaultComments = {
+        brandA: "올리브영 기획전 집행 및 상시SA 매출 호조로 전주 대비 +7.3% 성장을 기록하였습니다.",
+        brandB: "에뛰드 립케어 메인 프로모션 매출이 안정적으로 달성되는 중입니다.",
+        brandC: "에스쁘아 비벨벳 쿠션 신규 캠페인 가동으로 신규 유입이 확대되었습니다."
+    };
+
     let matrixData = {};
+    let comments = {};
 
     function init() {
-        const stored = localStorage.getItem("emnet_sales_matrix_v3");
+        const stored = localStorage.getItem("emnet_sales_matrix_v4");
         if (stored) {
             try { matrixData = JSON.parse(stored); }
             catch (e) { matrixData = JSON.parse(JSON.stringify(defaultMatrix)); }
@@ -52,36 +61,72 @@ const SalesTracker = (function () {
             saveStorage();
         }
 
+        const storedComms = localStorage.getItem("emnet_brand_comments");
+        if (storedComms) {
+            try { comments = JSON.parse(storedComms); }
+            catch (e) { comments = { ...defaultComments }; }
+        } else {
+            comments = { ...defaultComments };
+            saveCommentsStorage();
+        }
+
         renderMatrix();
+        renderComments();
         bindEvents();
     }
 
     function saveStorage() {
-        localStorage.setItem("emnet_sales_matrix_v3", JSON.stringify(matrixData));
+        localStorage.setItem("emnet_sales_matrix_v4", JSON.stringify(matrixData));
     }
 
-    // Calculation Formulas:
-    // A (이니스프리) = SUM(r1..r7)
-    // TOTAL (합계) = A + rB + rC
+    function saveCommentsStorage() {
+        localStorage.setItem("emnet_brand_comments", JSON.stringify(comments));
+    }
+
+    // Dynamic Formulas (Gross, Net 13.5%, WoW Variance)
     function calcFormulas() {
         const result = {
-            rA: {},      // 이니스프리 합산
-            rTOTAL: {}   // 총 합계 (A + B + C)
+            rA: {},          // 이니스프리 총매출 SUM(1..7)
+            rA_net: {},      // 이니스프리 순매출 (A * 13.5%)
+            rB_net: {},      // 에뛰드 순매출 (B * 13.5%)
+            rC_net: {},      // 에스쁘아 순매출 (C * 13.5%)
+            rTOTAL: {},      // 총매출 (A + B + C)
+            rTOTAL_net: {},  // 총 순매출 (TOTAL * 13.5%)
+            wowDiff: {},     // 전주 대비 증감 (₩)
+            wowPct: {}       // 전주 대비 증감 (%)
         };
 
-        columns.forEach(col => {
+        columns.forEach((col, idx) => {
             const colId = col.id;
             let sumA = 0;
             for (let i = 1; i <= 7; i++) {
-                const val = Number(matrixData[`r${i}`]?.[colId]) || 0;
-                sumA += val;
+                sumA += Number(matrixData[`r${i}`]?.[colId]) || 0;
             }
             result.rA[colId] = sumA;
+            result.rA_net[colId] = Math.round(sumA * NET_RATE);
 
             const valB = Number(matrixData["rB"]?.[colId]) || 0;
             const valC = Number(matrixData["rC"]?.[colId]) || 0;
 
-            result.rTOTAL[colId] = sumA + valB + valC;
+            result.rB_net[colId] = Math.round(valB * NET_RATE);
+            result.rC_net[colId] = Math.round(valC * NET_RATE);
+
+            const totalGross = sumA + valB + valC;
+            result.rTOTAL[colId] = totalGross;
+            result.rTOTAL_net[colId] = Math.round(totalGross * NET_RATE);
+
+            // WoW Variance
+            if (idx > 0) {
+                const prevColId = columns[idx - 1].id;
+                const prevTotal = result.rTOTAL[prevColId] || 0;
+                const diff = totalGross - prevTotal;
+                const pct = prevTotal > 0 ? ((diff / prevTotal) * 100).toFixed(1) : "0.0";
+                result.wowDiff[colId] = diff;
+                result.wowPct[colId] = pct;
+            } else {
+                result.wowDiff[colId] = 0;
+                result.wowPct[colId] = "0.0";
+            }
         });
 
         return result;
@@ -94,16 +139,33 @@ const SalesTracker = (function () {
         const formulas = calcFormulas();
         const activeCol = "w2"; // Default 8월 2주차
 
-        // Top KPI Cards Update (based on 8월 2주차)
+        // Top KPI Cards Update
         const totalRevW2 = formulas.rTOTAL[activeCol] || 0;
+        const totalNetW2 = formulas.rTOTAL_net[activeCol] || 0;
         const innisfreeW2 = formulas.rA[activeCol] || 0;
+        const innisfreeNetW2 = formulas.rA_net[activeCol] || 0;
         const etudeW2 = Number(matrixData.rB?.[activeCol]) || 0;
         const espoirW2 = Number(matrixData.rC?.[activeCol]) || 0;
+        const othersW2 = etudeW2 + espoirW2;
+        const othersNetW2 = Math.round(othersW2 * NET_RATE);
+
+        const wowDiff = formulas.wowDiff[activeCol] || 0;
+        const wowPct = formulas.wowPct[activeCol] || "0.0";
 
         document.getElementById("kpi-total-revenue").textContent = formatCurrency(totalRevW2);
+        document.getElementById("kpi-net-revenue").textContent = formatCurrency(totalNetW2);
         document.getElementById("kpi-innisfree-total").textContent = formatCurrency(innisfreeW2);
-        document.getElementById("kpi-etude-total").textContent = formatCurrency(etudeW2);
-        document.getElementById("kpi-espoir-total").textContent = formatCurrency(espoirW2);
+        document.getElementById("kpi-innisfree-net").textContent = `순매출(13.5%): ${formatCurrency(innisfreeNetW2)}`;
+        document.getElementById("kpi-others-total").textContent = formatCurrency(othersW2);
+        document.getElementById("kpi-others-net").textContent = `순매출(13.5%): ${formatCurrency(othersNetW2)}`;
+
+        const wowSubPill = document.getElementById("kpi-revenue-wow");
+        if (wowSubPill) {
+            const isPos = wowDiff >= 0;
+            const sign = isPos ? "+" : "";
+            wowSubPill.className = `kpi-sub ${isPos ? "positive" : "negative"}`;
+            wowSubPill.innerHTML = `<i class="fa-solid fa-arrow-trend-${isPos ? "up" : "down"}"></i> 전주 대비 ${sign}${formatCurrency(wowDiff)} (${sign}${wowPct}%)`;
+        }
 
         let html = "";
 
@@ -120,15 +182,15 @@ const SalesTracker = (function () {
                 const highlightClass = col.current ? 'highlight-col' : '';
                 html += `
                     <td class="excel-input-cell ${highlightClass}">
-                        <input type="number" class="matrix-input" data-row="${rKey}" data-col="${col.id}" value="${val}" placeholder="0" onchange="SalesTracker.onCellChange(this)" onkeyup="SalesTracker.onCellChange(this)">
+                        <input type="text" class="matrix-input" data-row="${rKey}" data-col="${col.id}" value="${formatNumber(val)}" placeholder="0" onblur="SalesTracker.onCellBlur(this)" onfocus="SalesTracker.onCellFocus(this)">
                     </td>`;
             });
             html += `</tr>`;
         }
 
-        // Row A: 이니스프리 (Auto Calculated SUM(1~7))
+        // Row A: 이니스프리 총매출 (Auto Calculated SUM 1~7)
         html += `<tr class="excel-row-calculated row-innisfree">
-            <td class="excel-cat-cell"><span class="row-code-badge badge-a">A</span> <strong>이니스프리 (1~7 합산)</strong></td>`;
+            <td class="excel-cat-cell"><span class="row-code-badge badge-a">A</span> <strong>이니스프리 (1~7 합산 총매출)</strong></td>`;
         columns.forEach(col => {
             const valA = formulas.rA[col.id] || 0;
             const highlightClass = col.current ? 'highlight-col' : '';
@@ -136,16 +198,26 @@ const SalesTracker = (function () {
         });
         html += `</tr>`;
 
+        // Row A (순매출 13.5%)
+        html += `<tr class="excel-row-net">
+            <td class="excel-cat-cell" style="padding-left: 28px !important; font-size: 0.8rem; color: #34d399;">┗ <strong>이니스프리 순매출 (13.5%)</strong></td>`;
+        columns.forEach(col => {
+            const valNetA = formulas.rA_net[col.id] || 0;
+            const highlightClass = col.current ? 'highlight-col' : '';
+            html += `<td class="excel-calc-cell cell-net ${highlightClass}"><span id="calc-A-net-${col.id}">${formatCurrency(valNetA)}</span></td>`;
+        });
+        html += `</tr>`;
+
         // Row B: 에뛰드 (Input Row)
         const infoB = inputRows.find(r => r.id === "rB");
         html += `<tr>
-            <td class="excel-cat-cell"><span class="row-code-badge badge-b">B</span> <strong>${infoB.name}</strong></td>`;
+            <td class="excel-cat-cell"><span class="row-code-badge badge-b">B</span> <strong>${infoB.name} (총매출)</strong></td>`;
         columns.forEach(col => {
             const val = matrixData["rB"]?.[col.id] || 0;
             const highlightClass = col.current ? 'highlight-col' : '';
             html += `
                 <td class="excel-input-cell ${highlightClass}">
-                    <input type="number" class="matrix-input" data-row="rB" data-col="${col.id}" value="${val}" placeholder="0" onchange="SalesTracker.onCellChange(this)" onkeyup="SalesTracker.onCellChange(this)">
+                    <input type="text" class="matrix-input" data-row="rB" data-col="${col.id}" value="${formatNumber(val)}" placeholder="0" onblur="SalesTracker.onCellBlur(this)" onfocus="SalesTracker.onCellFocus(this)">
                 </td>`;
         });
         html += `</tr>`;
@@ -153,20 +225,20 @@ const SalesTracker = (function () {
         // Row C: 에스쁘아 (Input Row)
         const infoC = inputRows.find(r => r.id === "rC");
         html += `<tr>
-            <td class="excel-cat-cell"><span class="row-code-badge badge-c">C</span> <strong>${infoC.name}</strong></td>`;
+            <td class="excel-cat-cell"><span class="row-code-badge badge-c">C</span> <strong>${infoC.name} (총매출)</strong></td>`;
         columns.forEach(col => {
             const val = matrixData["rC"]?.[col.id] || 0;
             const highlightClass = col.current ? 'highlight-col' : '';
             html += `
                 <td class="excel-input-cell ${highlightClass}">
-                    <input type="number" class="matrix-input" data-row="rC" data-col="${col.id}" value="${val}" placeholder="0" onchange="SalesTracker.onCellChange(this)" onkeyup="SalesTracker.onCellChange(this)">
+                    <input type="text" class="matrix-input" data-row="rC" data-col="${col.id}" value="${formatNumber(val)}" placeholder="0" onblur="SalesTracker.onCellBlur(this)" onfocus="SalesTracker.onCellFocus(this)">
                 </td>`;
         });
         html += `</tr>`;
 
-        // Row (A+B+C): 합계 (Auto Calculated Highlighted Row)
+        // Row (A+B+C) 총매출 합계
         html += `<tr class="excel-row-total">
-            <td class="excel-cat-cell"><span class="row-code-badge badge-total">합계</span> <strong>팀 전체 매출 (A+B+C)</strong></td>`;
+            <td class="excel-cat-cell"><span class="row-code-badge badge-total">합계</span> <strong>팀 전체 총매출 (A+B+C)</strong></td>`;
         columns.forEach(col => {
             const valTotal = formulas.rTOTAL[col.id] || 0;
             const highlightClass = col.current ? 'highlight-col' : '';
@@ -174,36 +246,64 @@ const SalesTracker = (function () {
         });
         html += `</tr>`;
 
+        // Row (A+B+C) 순매출 합계 (13.5%)
+        html += `<tr class="excel-row-net-total">
+            <td class="excel-cat-cell" style="padding-left: 28px !important; font-weight: 700; color: #047857;">┗ <strong>팀 전체 순매출 (13.5% 수수료기준)</strong></td>`;
+        columns.forEach(col => {
+            const valNetTotal = formulas.rTOTAL_net[col.id] || 0;
+            const highlightClass = col.current ? 'highlight-col' : '';
+            html += `<td class="excel-calc-cell cell-net-total ${highlightClass}"><strong id="calc-TOTAL-net-${col.id}">${formatCurrency(valNetTotal)}</strong></td>`;
+        });
+        html += `</tr>`;
+
+        // Row 전주 대비 증감 (WoW Variance)
+        html += `<tr class="excel-row-wow">
+            <td class="excel-cat-cell"><i class="fa-solid fa-chart-line" style="color: var(--brand-primary); margin-right: 6px;"></i> <strong>전주 대비 증감 (WoW)</strong></td>`;
+        columns.forEach(col => {
+            const diff = formulas.wowDiff[col.id] || 0;
+            const pct = formulas.wowPct[col.id] || "0.0";
+            const isPos = diff >= 0;
+            const sign = isPos ? "+" : "";
+            const highlightClass = col.current ? 'highlight-col' : '';
+            const colorClass = isPos ? 'style="color: #10b981; font-weight: 700;"' : 'style="color: #f87171; font-weight: 700;"';
+
+            html += `<td class="excel-calc-cell ${highlightClass}" ${colorClass}>
+                ${sign}${formatCurrency(diff)}<br><span style="font-size: 0.72rem; opacity: 0.9;">(${sign}${pct}%)</span>
+            </td>`;
+        });
+        html += `</tr>`;
+
         tbody.innerHTML = html;
     }
 
-    function onCellChange(inputEl) {
+    function renderComments() {
+        const commA = document.getElementById("comment-brand-a");
+        const commB = document.getElementById("comment-brand-b");
+        const commC = document.getElementById("comment-brand-c");
+
+        if (commA) commA.value = comments.brandA || "";
+        if (commB) commB.value = comments.brandB || "";
+        if (commC) commC.value = comments.brandC || "";
+    }
+
+    function onCellFocus(inputEl) {
+        // Strip commas on focus for easy typing
+        const raw = inputEl.value.replace(/,/g, "");
+        inputEl.value = raw === "0" ? "" : raw;
+        inputEl.select();
+    }
+
+    function onCellBlur(inputEl) {
         const rowId = inputEl.getAttribute("data-row");
         const colId = inputEl.getAttribute("data-col");
-        const val = Number(inputEl.value) || 0;
+        const rawVal = Number(inputEl.value.replace(/,/g, "")) || 0;
 
         if (!matrixData[rowId]) matrixData[rowId] = {};
-        matrixData[rowId][colId] = val;
+        matrixData[rowId][colId] = rawVal;
 
+        inputEl.value = formatNumber(rawVal);
         saveStorage();
-
-        // Recalculate formulas dynamically
-        const formulas = calcFormulas();
-
-        // Fast DOM update for row A and Total for this column
-        const elA = document.getElementById(`calc-A-${colId}`);
-        if (elA) elA.textContent = formatCurrency(formulas.rA[colId]);
-
-        const elTotal = document.getElementById(`calc-TOTAL-${colId}`);
-        if (elTotal) elTotal.textContent = formatCurrency(formulas.rTOTAL[colId]);
-
-        // Update Top KPI Cards (for 8월 2주차 'w2')
-        if (colId === "w2") {
-            document.getElementById("kpi-total-revenue").textContent = formatCurrency(formulas.rTOTAL["w2"]);
-            document.getElementById("kpi-innisfree-total").textContent = formatCurrency(formulas.rA["w2"]);
-            document.getElementById("kpi-etude-total").textContent = formatCurrency(matrixData.rB?.w2 || 0);
-            document.getElementById("kpi-espoir-total").textContent = formatCurrency(matrixData.rC?.w2 || 0);
-        }
+        renderMatrix();
     }
 
     function bindEvents() {
@@ -212,14 +312,31 @@ const SalesTracker = (function () {
 
         const resetBtn = document.getElementById("reset-matrix-data");
         if (resetBtn) resetBtn.addEventListener("click", resetMatrixData);
+
+        // Brand Comment Textareas
+        ["comment-brand-a", "comment-brand-b", "comment-brand-c"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener("change", function () {
+                    if (id === "comment-brand-a") comments.brandA = this.value;
+                    if (id === "comment-brand-b") comments.brandB = this.value;
+                    if (id === "comment-brand-c") comments.brandC = this.value;
+                    saveCommentsStorage();
+                    App.showToast("브랜드 성과 요약 코멘트가 저장되었습니다.", "success");
+                });
+            }
+        });
     }
 
     function resetMatrixData() {
         if (confirm("정말 예산 취합표 데이터를 초기 예시 데이터로 리셋하시겠습니까?")) {
             matrixData = JSON.parse(JSON.stringify(defaultMatrix));
+            comments = { ...defaultComments };
             saveStorage();
+            saveCommentsStorage();
             renderMatrix();
-            App.showToast("취합표 데이터가 초기화되었습니다.", "success");
+            renderComments();
+            App.showToast("취합표 데이터 및 코멘트가 초기화되었습니다.", "success");
         }
     }
 
@@ -237,35 +354,44 @@ const SalesTracker = (function () {
 
         // Row A
         let rowAVals = columns.map(col => formulas.rA[col.id] || 0);
-        csv += `"A. 이니스프리 (1~7합산)",` + rowAVals.join(",") + "\n";
+        csv += `"A. 이니스프리 (총매출)",` + rowAVals.join(",") + "\n";
+        let rowANetVals = columns.map(col => formulas.rA_net[col.id] || 0);
+        csv += `"  └ 이니스프리 순매출(13.5%)",` + rowANetVals.join(",") + "\n";
 
         // Row B
         let rowBVals = columns.map(col => matrixData["rB"]?.[col.id] || 0);
-        csv += `"B. 에뛰드",` + rowBVals.join(",") + "\n";
+        csv += `"B. 에뛰드 (총매출)",` + rowBVals.join(",") + "\n";
 
         // Row C
         let rowCVals = columns.map(col => matrixData["rC"]?.[col.id] || 0);
-        csv += `"C. 에스쁘아",` + rowCVals.join(",") + "\n";
+        csv += `"C. 에스쁘아 (총매출)",` + rowCVals.join(",") + "\n";
 
         // Row TOTAL
         let rowTotalVals = columns.map(col => formulas.rTOTAL[col.id] || 0);
-        csv += `"(A+B+C) 팀 매출 합계",` + rowTotalVals.join(",") + "\n";
+        csv += `"(A+B+C) 팀 총매출 합계",` + rowTotalVals.join(",") + "\n";
+        let rowTotalNetVals = columns.map(col => formulas.rTOTAL_net[col.id] || 0);
+        csv += `"  └ 팀 순매출 합계(13.5%)",` + rowTotalNetVals.join(",") + "\n";
 
         const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `eMnet_팀주간매출취합_Spreadsheet_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.download = `eMnet_팀주간매출취합_회계리포트_${new Date().toISOString().slice(0, 10)}.csv`;
         link.click();
-        App.showToast("주간 예산 취합표가 CSV 엑셀 파일로 다운로드되었습니다.", "success");
+        App.showToast("주간 회계 예산 취합표가 CSV 엑셀 파일로 다운로드되었습니다.", "success");
+    }
+
+    function formatNumber(num) {
+        return Number(num || 0).toLocaleString();
     }
 
     function formatCurrency(num) {
-        return "₩" + Number(num).toLocaleString();
+        return "₩" + Number(num || 0).toLocaleString();
     }
 
     return {
         init,
-        onCellChange,
+        onCellFocus,
+        onCellBlur,
         setMatrixData: (data) => { matrixData = data; saveStorage(); renderMatrix(); }
     };
 })();

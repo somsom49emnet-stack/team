@@ -186,8 +186,8 @@
                 <section class="tab-pane" id="tab-sales">
                     <div class="pane-header">
                         <div>
-                            <h1 class="pane-title"><i class="fa-solid fa-table-cells text-gradient"></i> 광고주 주간매출 취합 Hub (팀 통합 예산 양식)</h1>
-                            <p class="pane-subtitle">팀원들이 담당 파트별 예산을 셀에 직접 기재하면 이니스프리(1~7 합산) 및 팀 전체 예상 매출(A+B+C)이 실시간 자동 계산됩니다.</p>
+                            <h1 class="pane-title"><i class="fa-solid fa-table-cells text-gradient"></i> 광고주 주간매출 취합 Hub (회계기준 총/순매출 13.5%)</h1>
+                            <p class="pane-subtitle">팀원들이 담당 파트별 예산을 기재하면 총매출(A+B+C) 및 순매출(13.5% 수수료 회계기준), 전주 대비 증감이 실시간 자동 계산됩니다.</p>
                         </div>
                         <div class="pane-actions">
                             <button class="btn btn-outline" id="export-sales-csv">
@@ -199,41 +199,41 @@
                         </div>
                     </div>
 
-                    <!-- Summary KPI Cards -->
+                    <!-- Summary KPI Cards (Gross Revenue, Net Revenue 13.5%, WoW Variance) -->
                     <div class="kpi-grid">
                         <div class="kpi-card glass">
                             <div class="kpi-icon bg-purple-glow"><i class="fa-solid fa-calculator"></i></div>
                             <div class="kpi-details">
-                                <span class="kpi-title" id="kpi-week-label">8월 2주차 팀 전체 예상 매출 (A+B+C)</span>
+                                <span class="kpi-title" id="kpi-week-label">8월 2주차 팀 전체 총매출 (A+B+C)</span>
                                 <h3 class="kpi-value" id="kpi-total-revenue" style="color: var(--brand-primary);">₩0</h3>
-                                <span class="kpi-sub positive"><i class="fa-solid fa-circle-check"></i> 팀 전체 매출 합산 실시간 반응중</span>
+                                <span class="kpi-sub positive" id="kpi-revenue-wow"><i class="fa-solid fa-arrow-trend-up"></i> 전주 대비 증감계산 중</span>
                             </div>
                         </div>
 
                         <div class="kpi-card glass">
-                            <div class="kpi-icon bg-emerald-glow"><i class="fa-solid fa-leaf"></i></div>
+                            <div class="kpi-icon bg-emerald-glow" style="background: linear-gradient(135deg, #059669, #10b981);"><i class="fa-solid fa-sack-dollar"></i></div>
                             <div class="kpi-details">
-                                <span class="kpi-title">이니스프리 합계 (A = 1~7번 합산)</span>
+                                <span class="kpi-title">팀 전체 순매출 (회계기준 13.5%)</span>
+                                <h3 class="kpi-value" id="kpi-net-revenue" style="color: #34d399;">₩0</h3>
+                                <span class="kpi-sub positive"><i class="fa-solid fa-percent"></i> 총매출의 13.5% 수수료 자동 계산</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-icon bg-blue-glow"><i class="fa-solid fa-leaf"></i></div>
+                            <div class="kpi-details">
+                                <span class="kpi-title">이니스프리 총매출 (A = 1~7 합산)</span>
                                 <h3 class="kpi-value" id="kpi-innisfree-total">₩0</h3>
-                                <span class="kpi-sub positive">직영DA~쿠팡 7개 파트 자동 집계</span>
+                                <span class="kpi-sub positive" id="kpi-innisfree-net">순매출 13.5%: ₩0</span>
                             </div>
                         </div>
 
                         <div class="kpi-card glass">
                             <div class="kpi-icon bg-pink-glow" style="background: linear-gradient(135deg, #ec4899, #be185d);"><i class="fa-solid fa-heart"></i></div>
                             <div class="kpi-details">
-                                <span class="kpi-title">에뛰드 (B)</span>
-                                <h3 class="kpi-value" id="kpi-etude-total">₩0</h3>
-                                <span class="kpi-sub neutral">에뛰드 매출 입력값</span>
-                            </div>
-                        </div>
-
-                        <div class="kpi-card glass">
-                            <div class="kpi-icon bg-amber-glow"><i class="fa-solid fa-gem"></i></div>
-                            <div class="kpi-details">
-                                <span class="kpi-title">에스쁘아 (C)</span>
-                                <h3 class="kpi-value" id="kpi-espoir-total">₩0</h3>
-                                <span class="kpi-sub neutral">에스쁘아 매출 입력값</span>
+                                <span class="kpi-title">에뛰드(B) & 에스쁘아(C)</span>
+                                <h3 class="kpi-value" id="kpi-others-total">₩0</h3>
+                                <span class="kpi-sub neutral" id="kpi-others-net">순매출 13.5%: ₩0</span>
                             </div>
                         </div>
                     </div>
@@ -242,15 +242,15 @@
                     <div class="info-banner" style="background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3);">
                         <i class="fa-solid fa-lightbulb banner-icon" style="color: #f59e0b;"></i>
                         <div class="banner-text">
-                            <strong>입력 안내:</strong> 파트별(1~7) 및 에뛰드(B), 에스쁘아(C) 셀에 숫자를 기재하시면 <strong>이니스프리(A = 1~7 합산)</strong>와 <strong>팀 전체 매출 합계(A+B+C)</strong>가 즉시 자동 계산됩니다. (단위: 원, 숫자를 클릭하여 편집)
+                            <strong>회계 처리 안내:</strong> 모든 숫자는 천 단위 콤마(EX: <code>15,000,000</code>)로 자동 정렬되며, 회계용 <strong>순매출(13.5%)</strong> 및 <strong>전주 대비 증감</strong> 수치가 실시간 자동 반영됩니다.
                         </div>
                     </div>
 
                     <!-- Excel Matrix Spreadsheet Table -->
                     <div class="card excel-sheet-card">
                         <div class="card-header flex-between">
-                            <h3 class="card-title"><i class="fa-solid fa-file-excel text-success"></i> 주차별 광고주 파트별 예산 취합표</h3>
-                            <span class="badge badge-intranet"><i class="fa-solid fa-arrows-rotate"></i> 실시간 자동 수식 계산중</span>
+                            <h3 class="card-title"><i class="fa-solid fa-file-excel text-success"></i> 주차별 광고주 파트별 예산 취합표 (총매출 & 순매출 13.5%)</h3>
+                            <span class="badge badge-intranet"><i class="fa-solid fa-arrows-rotate"></i> 수수료 13.5% & 전주대비 자동 집계중</span>
                         </div>
                         <div class="table-responsive">
                             <table class="excel-matrix-table" id="excel-matrix-table">
@@ -273,18 +273,50 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Brand Weekly Performance Summary Comments Widget -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fa-solid fa-comment-dots"></i> 주차별 브랜드(A/B/C) 성과 요약 코멘트</h3>
+                        </div>
+                        <div class="brand-comments-grid">
+                            <div class="comment-card brand-a">
+                                <div class="comment-header">
+                                    <span class="badge badge-a">A. 이니스프리</span>
+                                    <span class="comment-time">8월 2주차 요약</span>
+                                </div>
+                                <textarea id="comment-brand-a" class="text-input comment-textarea" rows="2" placeholder="이니스프리 성과 요약 코멘트를 입력하세요 (예: 올영 기획전 집행으로 전주 대비 매출 +12% 증가)"></textarea>
+                            </div>
+
+                            <div class="comment-card brand-b">
+                                <div class="comment-header">
+                                    <span class="badge badge-b">B. 에뛰드</span>
+                                    <span class="comment-time">8월 2주차 요약</span>
+                                </div>
+                                <textarea id="comment-brand-b" class="text-input comment-textarea" rows="2" placeholder="에뛰드 성과 요약 코멘트를 입력하세요 (예: 립케어 메인 프로모션 매출 순항)"></textarea>
+                            </div>
+
+                            <div class="comment-card brand-c">
+                                <div class="comment-header">
+                                    <span class="badge badge-c">C. 에스쁘아</span>
+                                    <span class="comment-time">8월 2주차 요약</span>
+                                </div>
+                                <textarea id="comment-brand-c" class="text-input comment-textarea" rows="2" placeholder="에스쁘아 성과 요약 코멘트를 입력하세요 (예: 비벨벳 쿠션 신규 캠페인 가동)"></textarea>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
-                <!-- 3. 팀 연차 캘린더 TAB -->
+                <!-- 3. 팀 연차 & 일정(교육/미팅) 캘린더 TAB -->
                 <section class="tab-pane" id="tab-leave">
                     <div class="pane-header">
                         <div>
-                            <h1 class="pane-title"><i class="fa-solid fa-calendar-check text-gradient"></i> 팀 연차 캘린더</h1>
-                            <p class="pane-subtitle">팀원 연차/반차/병가 일정 공유 및 팀 공백 최소화 관리</p>
+                            <h1 class="pane-title"><i class="fa-solid fa-calendar-check text-gradient"></i> 팀 연차 & 일정(교육/미팅) 캘린더</h1>
+                            <p class="pane-subtitle">팀원 연차/반차/병가 및 교육 일정, 광고주 미팅 일정을 한눈에 관리하고 교육 내용을 요약 정리하는 통합 공간</p>
                         </div>
                         <div class="pane-actions">
                             <button class="btn btn-primary" id="add-leave-btn">
-                                <i class="fa-solid fa-calendar-plus"></i> 연차 일정 등록
+                                <i class="fa-solid fa-calendar-plus"></i> 일정/교육 등록
                             </button>
                         </div>
                     </div>
@@ -318,12 +350,23 @@
                             </div>
                         </div>
 
-                        <!-- Sidebar Upcoming Leave List -->
+                        <!-- Sidebar Upcoming Leave & Training List -->
                         <div class="card leave-sidebar-card">
-                            <h3 class="card-title"><i class="fa-solid fa-clock-history"></i> 다가오는 팀원 연차</h3>
+                            <h3 class="card-title"><i class="fa-solid fa-clock-history"></i> 다가오는 연차/교육/미팅 일정</h3>
                             <div class="leave-list-container" id="upcoming-leave-list">
                                 <!-- Dynamic List -->
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Training Summary Notes Board -->
+                    <div class="card" style="margin-top: 20px;">
+                        <div class="card-header flex-between">
+                            <h3 class="card-title"><i class="fa-solid fa-graduation-cap text-primary"></i> 팀 교육 일정 & 요약 정리 게시판</h3>
+                            <span class="badge badge-intranet">팀 학습 자산 및 교육 요약</span>
+                        </div>
+                        <div class="training-board" id="training-board-container">
+                            <!-- Dynamic Training Summary Cards -->
                         </div>
                     </div>
                 </section>
@@ -557,11 +600,11 @@
         </div>
     </div>
 
-    <!-- Leave Modal -->
+    <!-- Leave & Event Modal -->
     <div class="modal-backdrop hidden" id="modal-leave">
         <div class="modal-box">
             <div class="modal-header">
-                <h3 class="modal-title">팀원 연차 일정 등록</h3>
+                <h3 class="modal-title">팀원 일정 (연차/교육/미팅) 등록</h3>
                 <button class="modal-close" data-close-modal><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="form-leave">
@@ -573,11 +616,13 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="leave-type">구분</label>
+                        <label for="leave-type">일정 구분</label>
                         <select id="leave-type" class="select-input" required>
                             <option value="연차">연차 (종일)</option>
                             <option value="오전반차">오전 반차</option>
                             <option value="오후반차">오후 반차</option>
+                            <option value="교육">🎓 교육 일정</option>
+                            <option value="광고주미팅">🤝 광고주 미팅</option>
                             <option value="공가">공가</option>
                             <option value="병가">병가</option>
                         </select>
@@ -588,8 +633,16 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="leave-memo">업무 대행자 / 사유</label>
-                    <input type="text" id="leave-memo" class="text-input" placeholder="대행 AE 및 비상 연락망">
+                    <label for="leave-title">일정 제목 / 주제</label>
+                    <input type="text" id="leave-title" class="text-input" placeholder="예: 메타 최신 광고 알고리즘 세미나, 올리브영 미팅" required>
+                </div>
+                <div class="form-group">
+                    <label for="leave-memo">업무 대행자 / 비상 연락처</label>
+                    <input type="text" id="leave-memo" class="text-input" placeholder="대행 AE 및 메모">
+                </div>
+                <div class="form-group" id="group-training-summary">
+                    <label for="leave-summary"><i class="fa-solid fa-file-pen"></i> 교육 내용 요약 정리 (교육 선택 시 기재)</label>
+                    <textarea id="leave-summary" class="text-input" rows="3" placeholder="교육에서 배운 핵심 내용 및 팀 공유사항을 정리해보세요."></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-close-modal>취소</button>

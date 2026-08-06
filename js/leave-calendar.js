@@ -1,13 +1,13 @@
 /* ==========================================================================
-   Module 3: 팀 연차 캘린더 (Leave Calendar)
+   Module 3: 팀 연차 & 일정(교육/미팅) 캘린더 (Leave & Event Calendar)
    ========================================================================== */
 
 const LeaveCalendar = (function () {
     const defaultLeaves = [
-        { id: "l-1", member: "조다솜 AE", type: "연차", date: "2026-08-14", memo: "여름휴가 (대행: 박아름 AE)" },
-        { id: "l-2", member: "최민지 AE", type: "오후반차", date: "2026-08-14", memo: "병원 검진 (대행: 김예지 AE)" },
-        { id: "l-3", member: "정완우 AE", type: "연차", date: "2026-08-21", memo: "개인 사유" },
-        { id: "l-4", member: "강기민 AE", type: "오전반차", date: "2026-08-28", memo: "건강검진" }
+        { id: "l-1", member: "조다솜 AE", type: "연차", date: "2026-08-14", title: "여름휴가", memo: "대행: 이하림 AE", summary: "" },
+        { id: "l-2", member: "이하림 AE", type: "교육", date: "2026-08-18", title: "Meta 최신 시그널 및 Conversions API 세미나", memo: "온라인 라이브 교육", summary: "Meta Conversions API(CAPI) 도입 시 타게팅 정확도 및 ROAS 개선 방안 학습. 이니스프리 및 에뛰드 브랜드 캠페인 적용 검토 필요." },
+        { id: "l-3", member: "이원선 AE", type: "광고주미팅", date: "2026-08-20", title: "올리브영 MD 전략 미팅", memo: "올리브영 본사", summary: "" },
+        { id: "l-4", member: "박소윤 AE", type: "오후반차", date: "2026-08-25", title: "개인 일정", memo: "대행: 박수영 AE", summary: "" }
     ];
 
     let leaves = [];
@@ -15,7 +15,7 @@ const LeaveCalendar = (function () {
     let currentMonth = 7; // 0-indexed (7 = August)
 
     function init() {
-        const stored = localStorage.getItem("emnet_leaves");
+        const stored = localStorage.getItem("emnet_leaves_v2");
         if (stored) {
             try { leaves = JSON.parse(stored); }
             catch (e) { leaves = [...defaultLeaves]; }
@@ -27,24 +27,24 @@ const LeaveCalendar = (function () {
         populateMemberDropdown();
         renderCalendar();
         renderUpcomingList();
+        renderTrainingBoard();
         checkConflicts();
         bindEvents();
     }
 
     function saveStorage() {
-        localStorage.setItem("emnet_leaves", JSON.stringify(leaves));
+        localStorage.setItem("emnet_leaves_v2", JSON.stringify(leaves));
     }
 
     function populateMemberDropdown() {
         const select = document.getElementById("leave-member");
         if (!select) return;
-        const teamMembers = [
-            "박아름", "조다솜", "최민지", "김예지", "안지윤", "정완우", "강기민",
-            "이수민", "임가희", "김서영", "최지혜", "이하림", "이원선", "이혜민",
-            "김채은", "박소윤", "박수영", "최예원", "김혜진", "김예일", "박진혁",
-            "문지영", "조아란", "고하람", "김은혜", "강서원", "정재현", "최지원", "원나연"
+        const activeMembers = [
+            "조다솜", "이하림", "이원선", "이혜민", "김채은", "박소윤", "박수영",
+            "최예원", "김혜진", "김예일", "박진혁", "문지영", "조아란", "고하람",
+            "김은혜", "강서원", "정재현", "최지원", "원나연"
         ];
-        select.innerHTML = teamMembers.map(m => `<option value="${m} AE">${m} AE</option>`).join("");
+        select.innerHTML = activeMembers.map(m => `<option value="${m} AE">${m} AE</option>`).join("");
     }
 
     function renderCalendar() {
@@ -53,7 +53,6 @@ const LeaveCalendar = (function () {
         if (!grid || !monthTitle) return;
 
         monthTitle.textContent = `${currentYear}년 ${currentMonth + 1}월`;
-
         grid.innerHTML = "";
 
         const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
@@ -85,9 +84,11 @@ const LeaveCalendar = (function () {
             dayLeaves.forEach(l => {
                 let tagClass = "tag-full-day";
                 if (l.type.includes("반차")) tagClass = "tag-half-day";
+                else if (l.type === "교육") tagClass = "tag-education";
+                else if (l.type === "광고주미팅") tagClass = "tag-meeting";
                 else if (l.type === "공가") tagClass = "tag-official";
 
-                cellContent += `<div class="cal-event-tag ${tagClass}" title="${l.member} (${l.type})">${l.member.split(" ")[0]} ${l.type}</div>`;
+                cellContent += `<div class="cal-event-tag ${tagClass}" title="${l.member} (${l.type}: ${escapeHtml(l.title || '')})">${l.member.split(" ")[0]} ${l.type}</div>`;
             });
 
             dayCell.innerHTML = cellContent;
@@ -102,17 +103,48 @@ const LeaveCalendar = (function () {
         const sorted = [...leaves].sort((a, b) => new Date(a.date) - new Date(b.date));
 
         if (sorted.length === 0) {
-            container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">예정된 팀 연차가 없습니다.</p>`;
+            container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">예정된 일정(연차/교육/미팅)이 없습니다.</p>`;
             return;
         }
 
-        container.innerHTML = sorted.map(l => `
-            <div class="leave-item-card">
-                <div class="leave-item-info">
-                    <span class="leave-item-name">${escapeHtml(l.member)} <span class="badge badge-team" style="margin-left: 6px;">${l.type}</span></span>
-                    <span class="leave-item-date"><i class="fa-regular fa-calendar"></i> ${l.date} ${l.memo ? `(${escapeHtml(l.memo)})` : ''}</span>
+        container.innerHTML = sorted.map(l => {
+            let badgeStyle = "badge-team";
+            if (l.type === "교육") badgeStyle = "badge-education";
+            if (l.type === "광고주미팅") badgeStyle = "badge-media";
+
+            return `
+                <div class="leave-item-card">
+                    <div class="leave-item-info">
+                        <span class="leave-item-name">${escapeHtml(l.member)} <span class="badge ${badgeStyle}" style="margin-left: 6px;">${l.type}</span></span>
+                        <strong style="font-size: 0.82rem; margin-top: 2px;">${escapeHtml(l.title || '')}</strong>
+                        <span class="leave-item-date"><i class="fa-regular fa-calendar"></i> ${l.date} ${l.memo ? `(${escapeHtml(l.memo)})` : ''}</span>
+                    </div>
+                    <button class="btn-icon" onclick="LeaveCalendar.deleteLeave('${l.id}')" title="취소" style="color: var(--danger);"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <button class="btn-icon" onclick="LeaveCalendar.deleteLeave('${l.id}')" title="취소" style="color: var(--danger);"><i class="fa-solid fa-xmark"></i></button>
+            `;
+        }).join("");
+    }
+
+    function renderTrainingBoard() {
+        const board = document.getElementById("training-board-container");
+        if (!board) return;
+
+        const trainingItems = leaves.filter(l => l.type === "교육" && l.summary);
+
+        if (trainingItems.length === 0) {
+            board.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem; padding: 12px;">등록된 교육 요약 정리 내용이 없습니다. 교육 일정 등록 시 요약 내용을 정리해보세요!</p>`;
+            return;
+        }
+
+        board.innerHTML = trainingItems.map(t => `
+            <div class="training-card">
+                <div class="training-card-header">
+                    <span class="badge badge-education"><i class="fa-solid fa-graduation-cap"></i> ${escapeHtml(t.title)}</span>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">${t.date} | 작성자: ${escapeHtml(t.member)}</span>
+                </div>
+                <div class="training-card-body">
+                    <p style="font-size: 0.88rem; color: var(--text-primary); line-height: 1.6;">${escapeHtml(t.summary)}</p>
+                </div>
             </div>
         `).join("");
     }
@@ -122,9 +154,8 @@ const LeaveCalendar = (function () {
         const alertText = document.getElementById("conflict-date-text");
         if (!alertBox || !alertText) return;
 
-        // Group by date
         const dateCounts = {};
-        leaves.forEach(l => {
+        leaves.filter(l => l.type.includes("연차") || l.type.includes("반차")).forEach(l => {
             dateCounts[l.date] = (dateCounts[l.date] || 0) + 1;
         });
 
@@ -173,29 +204,33 @@ const LeaveCalendar = (function () {
         const member = document.getElementById("leave-member").value;
         const type = document.getElementById("leave-type").value;
         const date = document.getElementById("leave-date").value;
+        const title = document.getElementById("leave-title").value;
         const memo = document.getElementById("leave-memo").value;
+        const summary = document.getElementById("leave-summary").value;
 
         leaves.push({
             id: "l-" + Date.now(),
-            member, type, date, memo
+            member, type, date, title, memo, summary
         });
 
         saveStorage();
         renderCalendar();
         renderUpcomingList();
+        renderTrainingBoard();
         checkConflicts();
         document.getElementById("modal-leave").classList.add("hidden");
-        App.showToast("팀원 연차 일정이 추가되었습니다.", "success");
+        App.showToast("팀원 일정(연차/교육/미팅)이 등록되었습니다.", "success");
     }
 
     function deleteLeave(id) {
-        if (confirm("해당 연차 일정을 취소/삭제하시겠습니까?")) {
+        if (confirm("해당 일정을 삭제하시겠습니까?")) {
             leaves = leaves.filter(l => l.id !== id);
             saveStorage();
             renderCalendar();
             renderUpcomingList();
+            renderTrainingBoard();
             checkConflicts();
-            App.showToast("연차 일정이 취소되었습니다.", "danger");
+            App.showToast("일정이 삭제되었습니다.", "danger");
         }
     }
 
@@ -207,7 +242,6 @@ const LeaveCalendar = (function () {
     return {
         init,
         deleteLeave,
-        getUpcomingCount: () => leaves.length,
-        setLeaves: (data) => { leaves = data; saveStorage(); renderCalendar(); renderUpcomingList(); checkConflicts(); }
+        setLeaves: (data) => { leaves = data; saveStorage(); renderCalendar(); renderUpcomingList(); renderTrainingBoard(); checkConflicts(); }
     };
 })();
